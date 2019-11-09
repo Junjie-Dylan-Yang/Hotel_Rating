@@ -30,8 +30,11 @@ hotel_reviews$Hotel_Address %>% unique() %>% length()
 # summarise related columns to create predictors
 ```{r echo = FALSE, message = FALSE}
 hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
-  summarise(name=first(Hotel_Name), review_total=mean(Total_Number_of_Reviews), review_n=mean(Review_Total_Negative_Word_Counts),
-            review_p=mean(Review_Total_Positive_Word_Counts), review_m=mean(Additional_Number_of_Scoring),
+  summarise(name=first(Hotel_Name), 
+            review_total=mean(Total_Number_of_Reviews), 
+            review_n=mean(Review_Total_Negative_Word_Counts),
+            review_p=mean(Review_Total_Positive_Word_Counts), 
+            review_m=mean(Additional_Number_of_Scoring),
             reviewer_exp=mean(Total_Number_of_Reviews_Reviewer_Has_Given),
             score=mean(Average_Score))
 colnames(hotel_agg)[1] <- "address"
