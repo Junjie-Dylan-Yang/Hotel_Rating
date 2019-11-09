@@ -1,0 +1,53 @@
+---
+title: "Hotel Reviews"
+author: "Zhichao Hu"
+date: "November 8, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(lubridate)
+```
+# load data
+```{r echo = FALSE, message = TRUE}
+hotel_reviews <- read_csv("Hotel_Reviews.csv")
+```
+# date range of all reviews
+```{r echo = FALSE, message = FALSE}
+min(mdy(hotel_reviews$Review_Date))
+max(mdy(hotel_reviews$Review_Date))
+```
+
+# unique hotels in dataset
+There are two hotel with the same name but different address; address should be used as a unique identifier.
+```{r echo = FALSE, message = FALSE}
+hotel_reviews$Hotel_Name %>% unique() %>% length()
+hotel_reviews$Hotel_Address %>% unique() %>% length()
+```
+
+# summarise related columns to create predictors
+```{r echo = FALSE, message = FALSE}
+hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
+  summarise(name=first(Hotel_Name), review_total=mean(Total_Number_of_Reviews), review_n=mean(Review_Total_Negative_Word_Counts),
+            review_p=mean(Review_Total_Positive_Word_Counts), reviewer_exp=mean(Total_Number_of_Reviews_Reviewer_Has_Given), 
+            no_review=mean(Additional_Number_of_Scoring),
+            score=mean(Average_Score))
+colnames(hotel_agg)[1] <- "address"
+```
+
+# test linear model
+```{r echo = FALSE, message = FALSE}
+lmod <- lm(score~review_total+review_n+review_p+reviewer_exp+no_review, hotel_agg)
+```
+
+```{r echo = FALSE, message = FALSE}
+summary(lmod)
+```
+
+```{r echo = FALSE, message = FALSE}
+
+```
+
+
