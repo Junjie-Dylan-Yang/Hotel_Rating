@@ -31,7 +31,7 @@ hotel_reviews$Hotel_Address %>% unique() %>% length()
 # hotels with most number of reviews
 ```{r}
 hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% select(name, count, Hotel_Address)
+  arrange(desc(count)) %>% select(name, count)
 
 ```
 
