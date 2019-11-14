@@ -5,30 +5,38 @@ date: "November 8, 2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
+library(ggthemes)
 ```
 # load data
-```{r echo = FALSE, message = TRUE}
+```{r}
 hotel_reviews <- read_csv("Hotel_Reviews.csv")
 ```
 # date range of all reviews
-```{r echo = FALSE, message = FALSE}
+```{r}
 min(mdy(hotel_reviews$Review_Date))
 max(mdy(hotel_reviews$Review_Date))
 ```
 
 # unique hotels in dataset
 There are two hotel with the same name but different addresses; address should be used as a unique identifier.
-```{r echo = FALSE, message = FALSE}
+```{r}
 hotel_reviews$Hotel_Name %>% unique() %>% length()
 hotel_reviews$Hotel_Address %>% unique() %>% length()
 ```
 
+# hotels with most number of reviews
+```{r}
+hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
+  arrange(desc(count)) %>% select(name, count, Hotel_Address)
+
+```
+
 # summarise related columns to create predictors
-```{r echo = FALSE, message = FALSE}
+```{r}
 hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
   summarise(name=first(Hotel_Name), 
             review_total=mean(Total_Number_of_Reviews), 
@@ -40,16 +48,21 @@ hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>%
 colnames(hotel_agg)[1] <- "address"
 ```
 
-# test linear model
-```{r echo = FALSE, message = FALSE}
+# score histgram
+```{r}
+hotel_agg %>% ggplot(aes(score))+geom_histogram(color="blue", fill="white")+theme_bw()
+```
+
+# build linear model
+```{r}
 lmod <- lm(score~review_total+review_n+review_p+review_m+reviewer_exp, hotel_agg)
 ```
 
-```{r echo = FALSE, message = FALSE}
+```{r}
 summary(lmod)
 ```
 
-```{r echo = FALSE, message = FALSE}
+```{r}
 
 ```
 
