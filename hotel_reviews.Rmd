@@ -50,7 +50,8 @@ colnames(hotel_agg)[1] <- "address"
 
 # score histgram
 ```{r}
-hotel_agg %>% ggplot(aes(score))+geom_histogram(color="blue", fill="light blue")+theme_bw()
+hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
+  geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 ```
 
 # build linear model
