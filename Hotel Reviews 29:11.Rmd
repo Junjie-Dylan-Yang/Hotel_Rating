@@ -1,0 +1,115 @@
+---
+title: "Hotel Reviews"
+author: "Zhichao Hu, Hui Wang, and Junjie Yang"
+date: "11/29/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
+library(faraway)
+library(tidyverse)
+library(lubridate)
+library(ggthemes)
+library(lmtest)
+```
+
+# load data
+```{r}
+hotel_reviews <- read_csv("Hotel_Reviews.csv")
+```
+
+# date range of all reviews
+```{r}
+min(mdy(hotel_reviews$Review_Date))
+max(mdy(hotel_reviews$Review_Date))
+```
+
+# unique hotels in dataset
+There are two hotel with the same name but different addresses; address should be used as a unique identifier.
+```{r}
+hotel_reviews$Hotel_Name %>% unique() %>% length()
+hotel_reviews$Hotel_Address %>% unique() %>% length()
+```
+
+# hotels with most number of reviews
+```{r}
+hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
+  arrange(desc(count)) %>% select(name, count)
+```
+
+# summarise related columns to create predictors
+```{r}
+hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
+  summarise(name=first(Hotel_Name), 
+            review_total=mean(Total_Number_of_Reviews), 
+            review_n=mean(Review_Total_Negative_Word_Counts),
+            review_p=mean(Review_Total_Positive_Word_Counts), 
+            review_m=mean(Additional_Number_of_Scoring),
+            reviewer_exp=mean(Total_Number_of_Reviews_Reviewer_Has_Given),
+            score=mean(Average_Score))
+colnames(hotel_agg)[1] <- "address"
+```
+
+# score histgram
+```{r}
+hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
+  geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
+```
+
+# build linear model
+```{r}
+lmod <- lm(score~review_total+review_n+review_p+review_m+reviewer_exp, hotel_agg)
+```
+
+```{r}
+summary(lmod)
+```
+
+# Checking Error Assumption
+
+## Constant variance assumption
+
+```{r}
+par(mfrow=c(2,3))
+plot(lmod$fitted.values,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_total,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_n,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_p,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_m,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$reviewer_exp,residuals(lmod))
+abline(h=0, col = 'red')
+```
+
+## Normality assumption
+
+```{r}
+qqnorm(residuals(lmod),ylab="Residuals",main="")
+qqline(residuals(lmod),col='blue')
+shapiro.test(residuals(lmod))
+```
+
+## Correlated errors
+
+```{r}
+dwtest(score~review_total+review_n+review_p+review_m+reviewer_exp, data = hotel_agg)
+```
+
+# Multicolliearity
+
+```{r}
+x = model.matrix(lmod)[, -1]
+vif(x)
+ave(vif(x))
+```
