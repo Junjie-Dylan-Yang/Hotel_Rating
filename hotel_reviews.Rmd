@@ -1,7 +1,7 @@
 ---
 title: "Hotel Reviews"
-author: "Zhichao Hu"
-date: "November 8, 2019"
+author: "Zhichao Hu, Hui Wang, and Junjie Yang"
+date: "November 30, 2019"
 output: html_document
 ---
 
@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
 library(ggthemes)
+library(faraway)
+library(lmtest)
 ```
 # EDA of the dataset
 ## load data
@@ -69,9 +71,47 @@ summary(lmod)
 ```
 
 ## model diagnosis
-```{r}
+### check error assumption
+#### constant variance assumption
 
+```{r}
+par(mfrow=c(2,3))
+plot(lmod$fitted.values,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_t,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_n,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_p,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$review_m,residuals(lmod))
+abline(h=0, col = 'red')
+plot(hotel_agg$reviewer_exp,residuals(lmod))
+abline(h=0, col = 'red')
 ```
+
+#### normality assumption
+
+```{r}
+qqnorm(residuals(lmod),ylab="Residuals",main="QQ plot")
+qqline(residuals(lmod),col="blue")
+shapiro.test(residuals(lmod))
+```
+
+#### correlated errors
+
+```{r}
+dwtest(score~review_t+review_n+review_p+review_m+reviewer_exp, data = hotel_agg)
+```
+
+### multicolliearity
+
+```{r}
+x = model.matrix(lmod)[, -1]
+vif(x)
+ave(vif(x))
+```
+
 
 # liner model of a single hotel
 ## Prepare subset
