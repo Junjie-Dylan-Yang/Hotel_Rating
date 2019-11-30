@@ -11,56 +11,99 @@ library(tidyverse)
 library(lubridate)
 library(ggthemes)
 ```
-# load data
+# EDA of the dataset
+## load data
 ```{r}
 hotel_reviews <- read_csv("Hotel_Reviews.csv")
 ```
-# date range of all reviews
+## date range of all reviews
 ```{r}
 min(mdy(hotel_reviews$Review_Date))
 max(mdy(hotel_reviews$Review_Date))
 ```
 
-# unique hotels in dataset
+## unique hotels in dataset
 There are two hotel with the same name but different addresses; address should be used as a unique identifier.
 ```{r}
 hotel_reviews$Hotel_Name %>% unique() %>% length()
 hotel_reviews$Hotel_Address %>% unique() %>% length()
 ```
 
-# hotels with most number of reviews
+## hotels with most number of reviews
 ```{r}
 hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
   arrange(desc(count)) %>% select(name, count)
 
 ```
 
-# summarise related columns to create predictors
+## summarise related columns to create predictors
 ```{r}
 hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
   summarise(name=first(Hotel_Name), 
-            review_total=mean(Total_Number_of_Reviews), 
-            review_n=mean(Review_Total_Negative_Word_Counts),
-            review_p=mean(Review_Total_Positive_Word_Counts), 
-            review_m=mean(Additional_Number_of_Scoring),
-            reviewer_exp=mean(Total_Number_of_Reviews_Reviewer_Has_Given),
+            review_t=mean(Total_Number_of_Reviews), # t stands for total
+            review_n=mean(Review_Total_Negative_Word_Counts), # n stands for negtive
+            review_p=mean(Review_Total_Positive_Word_Counts), # p stands for positive
+            review_m=mean(Additional_Number_of_Scoring), # m stands for missing
+            reviewer_exp=mean(Total_Number_of_Reviews_Reviewer_Has_Given), #exp stands for experience
             score=mean(Average_Score))
 colnames(hotel_agg)[1] <- "address"
 ```
 
-# score histgram
+## score histgram
+
+The average scores are not prefectly normal.
 ```{r}
 hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 ```
 
-# build linear model
+# linear model of averaged predictors
+## build linear model
+Average score of each hotel is the response.
 ```{r}
-lmod <- lm(score~review_total+review_n+review_p+review_m+reviewer_exp, hotel_agg)
+lmod <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg)
 ```
 
 ```{r}
 summary(lmod)
+```
+
+## model diagnosis
+```{r}
+
+```
+
+# liner model of a single hotel
+## Prepare subset
+Choose a hotel with most number of reviews to explore other individual characteristics of reviewers as predictors
+```{r}
+#subset the intial dataframe to a single hotel
+hotel_bri <- hotel_reviews %>% filter(Hotel_Name=="Britannia International Hotel Canary Wharf") %>% 
+  select(review_t=Total_Number_of_Reviews,
+         review_n=Review_Total_Negative_Word_Counts,
+         review_p=Review_Total_Positive_Word_Counts,
+         review_m=Additional_Number_of_Scoring,
+         reviewer_exp=Total_Number_of_Reviews_Reviewer_Has_Given,
+         score_i=Reviewer_Score) # i stands for individual
+
+```
+
+## individual score histgram
+
+The individual scores are not normal.
+```{r}
+hotel_bri %>% ggplot(aes(score_i))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
+  geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
+```
+
+## build linear model
+Each individual score (Reviewer_Score) is the response.
+```{r}
+lmod_bri <- lm(score_i~review_t+review_n+review_p+review_m+reviewer_exp, hotel_bri)
+```
+
+```{r}
+summary(lmod_bri)
 ```
 
 ```{r}
