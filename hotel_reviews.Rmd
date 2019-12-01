@@ -64,9 +64,6 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
 Average score of each hotel is the response.
 ```{r}
 lmod <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg)
-```
-
-```{r}
 summary(lmod)
 ```
 
@@ -74,6 +71,11 @@ summary(lmod)
 ### check error assumption
 #### constant variance assumption
 
+Plot the residuals against fitted value and predictors.
+Choose review_t and review_m, to take F-test and reject the null hypothesis based on the p-value.
+Review_t and review_m are related to the number of reviews or scores of hotels. The hotels who have a small amout of reviwes have larger residuals. 
+
+The other residuals variances are constant. 
 ```{r}
 par(mfrow=c(2,3))
 plot(lmod$fitted.values,residuals(lmod))
@@ -88,17 +90,30 @@ plot(hotel_agg$review_m,residuals(lmod))
 abline(h=0, col = 'red')
 plot(hotel_agg$reviewer_exp,residuals(lmod))
 abline(h=0, col = 'red')
+
+var.test(residuals(lmod)[hotel_agg$review_t>2000], residuals(lmod)[hotel_agg$review_t<2000])
+var.test(residuals(lmod)[hotel_agg$review_p>28], residuals(lmod)[hotel_agg$review_p<28])
+var.test(residuals(lmod)[hotel_agg$review_m>250], residuals(lmod)[hotel_agg$review_m<250])
 ```
 
 #### normality assumption
+
+The QQ-plot looks heavy-tailed and the p-value of Shapiro-Wilk normality test is smaller than 0.05.
+But from the histgram plot, it looks normal without lowest points around -2.0.
 
 ```{r}
 qqnorm(residuals(lmod),ylab="Residuals",main="QQ plot")
 qqline(residuals(lmod),col="blue")
 shapiro.test(residuals(lmod))
+
+hist(residuals(lmod), breaks = 100)
+
 ```
 
 #### correlated errors
+
+The p-value of DW test is much smaller than 0.05, we need reject the null hypothesis. Why???
+Do we still need to check the correlated errors?
 
 ```{r}
 dwtest(score~review_t+review_n+review_p+review_m+reviewer_exp, data = hotel_agg)
@@ -106,10 +121,12 @@ dwtest(score~review_t+review_n+review_p+review_m+reviewer_exp, data = hotel_agg)
 
 ### multicolliearity
 
+The max Variance Inflation Factor is smaller than 10 and the average of VIF is 2. We think the predictors are not multicolliearity.
+
 ```{r}
 x = model.matrix(lmod)[, -1]
 vif(x)
-ave(vif(x))
+mean(vif(x))
 ```
 
 
