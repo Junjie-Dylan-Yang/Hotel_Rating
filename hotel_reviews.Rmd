@@ -12,12 +12,14 @@ library(lubridate)
 library(ggthemes)
 library(faraway)
 library(lmtest)
+library(MASS)
 ```
 # EDA of the dataset
 ## load data
 ```{r}
 hotel_reviews <- read_csv("Hotel_Reviews.csv")
 ```
+
 ## date range of all reviews
 ```{r}
 min(mdy(hotel_reviews$Review_Date))
@@ -51,13 +53,34 @@ hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>%
 colnames(hotel_agg)[1] <- "address"
 ```
 
+Descriptive satatistics.
+```{r}
+summary(hotel_agg)
+```
+
 ## score histgram
 
 The average scores are not prefectly normal.
+
+### Doe we need to remove the observations near 5?
 ```{r}
 hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 ```
+
+Same situation with the residual plot, review_t and review_m are not normal distributed. Both variables are related to amount of reviews.
+
+### Need to add 
+
+```{r}
+par(mfrow = c(2,3))
+hist(hotel_agg$review_t, main = NULL)
+hist(hotel_agg$review_n, main = NULL)
+hist(hotel_agg$review_p, main = NULL)
+hist(hotel_agg$review_m, main = NULL)
+hist(hotel_agg$reviewer_exp, main = NULL)
+```
+
 
 # linear model of averaged predictors
 ## build linear model
@@ -68,6 +91,13 @@ summary(lmod)
 ```
 
 ## model diagnosis
+
+Identify a transformation using Boxcox. The nearest integer is 3, so we consider a transformation with lambda = 3.
+
+```{r}
+boxcox(lmod, lambda = seq(1,5,0.1), plotit = TRUE)
+```
+
 ### check error assumption
 #### constant variance assumption
 
@@ -119,7 +149,7 @@ Do we still need to check the correlated errors?
 dwtest(score~review_t+review_n+review_p+review_m+reviewer_exp, data = hotel_agg)
 ```
 
-### multicolliearity
+### multicolliearity - Variance Inflation Factor
 
 The max Variance Inflation Factor is smaller than 10 and the average of VIF is 2. We think the predictors are not multicolliearity.
 
@@ -129,6 +159,15 @@ vif(x)
 mean(vif(x))
 ```
 
+Influential Observations - Cook's D
+It appears that all Cook's D values are smaller than 1.
+
+Do we still need to remove obervation #1424 ?
+
+```{r}
+cook <- cooks.distance(lmod)
+halfnorm(cook, 1, ylab = "Cook's distance")
+```
 
 # liner model of a single hotel
 ## Prepare subset
