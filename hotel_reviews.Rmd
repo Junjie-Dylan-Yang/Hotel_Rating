@@ -15,6 +15,7 @@ library(lmtest)
 library(MASS)
 library(leaps) ## for regsubsets()
 ```
+
 # EDA of the dataset
 ## load data
 ```{r}
@@ -54,7 +55,7 @@ hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>%
 colnames(hotel_agg)[1] <- "address"
 ```
 
-Descriptive satatistics.
+# Descriptive satatistics.
 ```{r}
 dim(hotel_agg)
 summary(hotel_agg)
@@ -64,64 +65,62 @@ sd(hotel_agg$score)
 ## score histgram
 
 The average scores are not prefectly normal.
-
-### Doe we need to remove the observations near 5?
 ```{r}
 hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
-
 ```
 
-Same situation with the residual plot, review_t and review_m are not normal distributed. Both variables are related to amount of reviews.
+## remove an outlier with the score of 5.2
 
-### Need to add 
+```{r}
+OutVals = boxplot(hotel_agg$score)$out
+OutVals
+which(hotel_agg$score < 5.5)
+hotel_agg1=hotel_agg[ -which(hotel_agg$score < 5.5), ] # remove the #1444 hotel with the score of 5.2
+
+hotel_agg1 %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
+  geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
+dim(hotel_agg1)
+```
+
+Two predictors, review_t and review_m, are not normal distributed. Both variables are related to amount of reviews.
 
 ```{r}
 par(mfrow = c(2,3))
-hist(hotel_agg$review_t, main = NULL, ylab = NULL)
-hist(hotel_agg$review_n, main = NULL, ylab = NULL)
-hist(hotel_agg$review_p, main = NULL, ylab = NULL)
-hist(hotel_agg$review_m, main = NULL, ylab = NULL)
-hist(hotel_agg$reviewer_exp, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_t, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_n, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_p, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_m, main = NULL, ylab = NULL)
+hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
 ```
-
 
 # linear model of averaged predictors
 ## build linear model
 Average score of each hotel is the response.
 ```{r}
-lmod0 <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg)
+lmod0 <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1)
 summary(lmod0)
 ```
 
 ## model diagnosis
 
-Identify a transformation using Boxcox. The nearest integer is 3, so we consider a transformation of the fitted value with lambda = 3.
+Try to identify a transformation using Boxcox. The nearest integer is 3, so we consider a transformation of the fitted value with lambda = 3.
 
 ```{r}
 boxcox(lmod0, lambda = seq(1,5,0.1), plotit = TRUE)
-scoreCube = hotel_agg$score*hotel_agg$score*hotel_agg$score  # Box-cox transformation
-review_t1 = hotel_agg$review_t^(1/3)  # To make it normal distributed
-review_m1 = hotel_agg$review_m^(1/3)  # To make it normal distributed
-lmod <- lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg)
-summary(lmod)
+scoreCube = hotel_agg1$score*hotel_agg1$score*hotel_agg1$score  # Box-cox transformation
+review_t1 = hotel_agg1$review_t^(1/3)  # To make it normal distributed
+review_m1 = hotel_agg1$review_m^(1/3)  # To make it normal distributed
+lmod_tf <- lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
+summary(lmod_tf)
 
-
-## try to remove some outliers and try the boxcox transformation again
-OutVals = boxplot(hotel_agg$score)$out
-OutVals
-which(hotel_agg$score %in% OutVals)
-hotel_agg1=hotel_agg[ -which(hotel_agg$score %in% OutVals), ]
-lmodtest <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1)
-summary(lmodtest)
-boxcox(lmodtest, lambda = seq(1,5,0.1), plotit = TRUE)
-
+# 是否需要transform predictors
 par(mfrow = c(2,3))
 hist(review_t1, main = NULL, ylab = NULL)
-hist(hotel_agg$review_n, main = NULL, ylab = NULL)
-hist(hotel_agg$review_p, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_n, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_p, main = NULL, ylab = NULL)
 hist(review_m1, main = NULL, ylab = NULL)
-hist(hotel_agg$reviewer_exp, main = NULL, ylab = NULL)
+hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
 ```
 
 ### check error assumption
@@ -134,22 +133,22 @@ Review_t and review_m are related to the number of reviews or scores of hotels. 
 The other residuals variances are constant. 
 ```{r}
 par(mfrow=c(2,3))
-plot(lmod$fitted.values,residuals(lmod))
+plot(lmod0$fitted.values,residuals(lmod0))
 abline(h=0, col = 'red')
-plot(review_t1,residuals(lmod))
+plot(hotel_agg1$review_t,residuals(lmod0))
 abline(h=0, col = 'red')
-plot(hotel_agg$review_n,residuals(lmod))
+plot(hotel_agg1$review_n,residuals(lmod0))
 abline(h=0, col = 'red')
-plot(hotel_agg$review_p,residuals(lmod))
+plot(hotel_agg1$review_p,residuals(lmod0))
 abline(h=0, col = 'red')
-plot(review_m1,residuals(lmod))
+plot(hotel_agg1$review_m,residuals(lmod0))
 abline(h=0, col = 'red')
-plot(hotel_agg$reviewer_exp,residuals(lmod))
+plot(hotel_agg1$reviewer_exp,residuals(lmod0))
 abline(h=0, col = 'red')
 
-var.test(residuals(lmod)[hotel_agg$review_t>2000], residuals(lmod)[hotel_agg$review_t<2000])
-var.test(residuals(lmod)[hotel_agg$review_p>28], residuals(lmod)[hotel_agg$review_p<28])
-var.test(residuals(lmod)[hotel_agg$review_m>250], residuals(lmod)[hotel_agg$review_m<250])
+var.test(residuals(lmod0)[review_t1>10], residuals(lmod)[review_t1<10])
+var.test(residuals(lmod0)[hotel_agg$review_p>28], residuals(lmod)[hotel_agg$review_p<28])
+var.test(residuals(lmod0)[review_m1>5], residuals(lmod)[review_m1<5])
 ```
 
 #### normality assumption
@@ -158,12 +157,11 @@ The QQ-plot looks heavy-tailed and the p-value of Shapiro-Wilk normality test is
 But from the histgram plot, it looks normal.
 
 ```{r}
-qqnorm(residuals(lmod),ylab="Residuals",main="QQ plot")
-qqline(residuals(lmod),col="blue")
-shapiro.test(residuals(lmod))
+qqnorm(residuals(lmod0),ylab="Residuals",main="QQ plot")
+qqline(residuals(lmod0),col="blue")
+shapiro.test(residuals(lmod0))
 
-hist(residuals(lmod), breaks = 50)
-
+hist(residuals(lmod0), breaks = 50)
 ```
 
 #### correlated errors
@@ -181,41 +179,53 @@ dwtest(scoreCube~review_t1+review_n+review_p+review_m1+reviewer_exp, data = hote
 The max Variance Inflation Factor is smaller than 10 and the average of VIF is less than 3. We think the predictors are not multicolliearity.
 
 ```{r}
-x = model.matrix(lmod)[, -1]
+x = model.matrix(lmod0)[, -1]
 vif(x)
 mean(vif(x))
 ```
 
-### Influential Observations - Cook's D
-
-It appears that all Cook's D values are smaller than 1. We remove the obervation #1411 and creat a new model as lmod1. Because we consider it is a influential data point as its Cook's D value is much higher than the one follows.
+Outlier
 
 ```{r}
-cook <- cooks.distance(lmod)
+nrow(hotel_agg1)
+stud = rstudent(lmod0)
+jackres = stud*(1477/(1478-stud^2))^0.5
+head(jackres[order(abs(stud), decreasing = T)])
+qt(.025/1484, 1477)
+```
+
+### Influential Observations - Cook's D
+
+It appears that all Cook's D values are smaller than 1. We remove the obervation #1424 and creat a new model as lmod1. Because we consider it is a influential data point as its Cook's D value is much higher than the one follows.
+
+```{r}
+cook = cooks.distance(lmod0)
 halfnorm(cook, 1, ylab = "Cook's distance")
 
-lmod1 <- lm(scoreCube~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg, subset = (cook < 0.2))
+lmod1 = lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1, subset = (cook < 0.3))
 summary(lmod1)
 ```
 
-# forward search
+# model selection
+
+##forward search
 
 ```{r}
-n = nrow(hotel_agg)
-out.null = lm(scoreCube ~ 1, hotel_agg)
+n = nrow(hotel_agg1)
+out.null = lm(score ~ 1, hotel_agg1)
 out.full = lmod1
 full = formula(lmod1)
-out_f = regsubsets(full, data = hotel_agg, method = 'forward', nvmax = 5)
+out_f = regsubsets(full, data = hotel_agg1, method = 'forward', nvmax = 5)
 out_f0 = summary(out_f)
 out_f0$outmat
+```
 
-##Forward selection using AIC for model lmod0
-model_fwd=regsubsets(score~review_t1+review_n+review_p+review_m1+reviewer_exp, data=hotel_agg,nvmax=NULL, method='forward')
-summary(model_fwd)
-plot(model_fwd, scale='adjr2',main='forward selection')
-model_fwd_summary = summary(model_fwd)
-which.max(model_fwd_summary$adjr2) #select the best model, which is still the full model)
+##Early stopping forward selection using BIC for model lmod1
 
+```{r}
+out.forward = step(out.null, scope = list(lower = ~1, upper = full), 
+                   k = log(n), direction = "forward", trace = FALSE)
+out.forward$coefficients
 ```
 
 
@@ -230,12 +240,12 @@ bic
 ```{r}
 set.seed(1)
 k=5
-fold=sample(1:k,nrow(hotel_agg),replace=TRUE)
+fold=sample(1:k,nrow(hotel_agg1),replace=TRUE)
 
 kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
-  test=hotel_agg[fold==i,] # test set is the ith group for the ith iteration
-  train=hotel_agg[fold!=i,]# training set is all the other groups
+  test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg1[fold!=i,]# training set is all the other groups
   
   pred.time=predict(lmod0,test)
   rmse=sqrt(mean((test$score-pred.time)^2))
