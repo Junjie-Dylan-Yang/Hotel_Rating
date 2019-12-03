@@ -220,6 +220,21 @@ out_f0 = summary(out_f)
 out_f0$outmat
 ```
 
+```{r}
+bic = out_f0$bic
+a = c(1, 2, 3, 4, 5)
+plot(a, bic)
+bic
+adjr2=out_f0$adjr2
+adjr2
+plot(out_f, scale="adjr2", main="Forward Selection: adjr2")
+
+which.min(model_fwd_summary$bic) 
+which.max(model_fwd_summary$adjr2)
+#Best model in terms of both adjusted R-squared and bic is the full model 
+
+```
+
 ##Early stopping forward selection using BIC for model lmod1
 
 ```{r}
@@ -228,15 +243,7 @@ out.forward = step(out.null, scope = list(lower = ~1, upper = full),
 out.forward$coefficients
 ```
 
-
-```{r}
-bic = out_f0$bic
-a = c(1, 2, 3, 4, 5)
-plot(a, bic)
-bic
-```
-
-## 5 Fold Cross Validation
+## 5 Fold Cross Validation for lmod1 (full model)
 ```{r}
 set.seed(1)
 k=5
@@ -247,15 +254,40 @@ for(i in 1:k){
   test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
   train=hotel_agg1[fold!=i,]# training set is all the other groups
   
-  pred.time=predict(lmod0,test)
+  pred.time=predict(lmod1,test)
   rmse=sqrt(mean((test$score-pred.time)^2))
   
   kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
 }
 
 kfold.rmse # show our RMSEs for each iteration
-mean(kfold.rmse) #avg rmse
+mean(kfold.rmse) #avg rmse 0.3525199
 ```
+
+## 5 Fold Cross Validation for lmodnoexp (reduced model using early stopping)
+```{r}
+#If we ddecide to get rid of variable exp based on forward selection
+lmodnoexp = lm(score~review_t+review_n+review_p+review_m, hotel_agg1, subset = (cook < 0.3))
+summary(lmodnoexp)
+set.seed(1)
+k=5
+fold=sample(1:k,nrow(hotel_agg1),replace=TRUE)
+
+kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
+for(i in 1:k){
+  test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg1[fold!=i,]# training set is all the other groups
+  
+  pred.time=predict(lmodnoexp,test)
+  rmse=sqrt(mean((test$score-pred.time)^2))
+  
+  kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
+}
+
+kfold.rmse # show our RMSEs for each iteration
+mean(kfold.rmse) #avg rmse 0.353181
+```
+
 
 # liner model of a single hotel
 ## Prepare subset
