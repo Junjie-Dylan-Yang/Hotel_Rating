@@ -146,9 +146,9 @@ abline(h=0, col = 'red')
 plot(hotel_agg1$reviewer_exp,residuals(lmod0))
 abline(h=0, col = 'red')
 
-var.test(residuals(lmod0)[review_t1>10], residuals(lmod)[review_t1<10])
-var.test(residuals(lmod0)[hotel_agg$review_p>28], residuals(lmod)[hotel_agg$review_p<28])
-var.test(residuals(lmod0)[review_m1>5], residuals(lmod)[review_m1<5])
+var.test(residuals(lmod0)[hotel_agg1$review_t>1000], residuals(lmod0)[hotel_agg1$review_t<1000])
+var.test(residuals(lmod0)[hotel_agg1$review_p>28], residuals(lmod0)[hotel_agg1$review_p<28])
+var.test(residuals(lmod0)[hotel_agg1$review_m>200], residuals(lmod0)[hotel_agg1$review_m<200])
 ```
 
 #### normality assumption
