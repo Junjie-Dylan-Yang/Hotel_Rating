@@ -111,7 +111,7 @@ boxcox(lmod0, lambda = seq(1,5,0.1), plotit = TRUE)
 scoreCube = hotel_agg1$score*hotel_agg1$score*hotel_agg1$score  # Box-cox transformation
 review_t1 = hotel_agg1$review_t^(1/3)  # To make it normal distributed
 review_m1 = hotel_agg1$review_m^(1/3)  # To make it normal distributed
-lmod_tf <- lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
+lmod_tf = lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
 summary(lmod_tf)
 
 # 是否需要transform predictors
@@ -189,9 +189,9 @@ Outlier
 ```{r}
 nrow(hotel_agg1)
 stud = rstudent(lmod0)
-jackres = stud*(1477/(1478-stud^2))^0.5
+jackres = stud*(1485/(1486-stud^2))^0.5
 head(jackres[order(abs(stud), decreasing = T)])
-qt(.025/1484, 1477)
+qt(.025/1492, 1485)
 ```
 
 ### Influential Observations - Cook's D
