@@ -57,7 +57,7 @@ colnames(hotel_agg)[1] <- "address"
 
 # Descriptive satatistics.
 ```{r}
-dim(hotel_agg)
+#dim(hotel_agg)
 summary(hotel_agg)
 sd(hotel_agg$score)
 ```
@@ -80,10 +80,10 @@ hotel_agg1=hotel_agg[ -which(hotel_agg$score < 5.5), ] # remove the #1444 hotel 
 
 hotel_agg1 %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
-dim(hotel_agg1)
+#dim(hotel_agg1)
 ```
 
-Two predictors, review_t and review_m, are not normal distributed. Both variables are related to amount of reviews.
+Two predictors, review_t and review_m, are not normally distributed. Both variables are related to amount of reviews.
 
 ```{r}
 par(mfrow = c(2,3))
@@ -114,7 +114,7 @@ review_m1 = hotel_agg1$review_m^(1/3)  # To make it normal distributed
 lmod_tf = lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
 summary(lmod_tf)
 
-# 是否需要transform predictors
+# consider transforming predictors
 par(mfrow = c(2,3))
 hist(review_t1, main = NULL, ylab = NULL)
 hist(hotel_agg1$review_n, main = NULL, ylab = NULL)
@@ -176,7 +176,7 @@ dwtest(scoreCube~review_t1+review_n+review_p+review_m1+reviewer_exp, data = hote
 
 ### multicolliearity - Variance Inflation Factor
 
-The max Variance Inflation Factor is smaller than 10 and the average of VIF is less than 3. We think the predictors are not multicolliearity.
+The max Variance Inflation Factor is smaller than 10 and the average of VIF is less than 3. We think the predictors have no multicolliearity.
 
 ```{r}
 x = model.matrix(lmod0)[, -1]
@@ -190,7 +190,7 @@ Outlier
 nrow(hotel_agg1)
 stud = rstudent(lmod0)
 jackres = stud*(1485/(1486-stud^2))^0.5
-head(jackres[order(abs(stud), decreasing = T)])
+head(jackres[order(abs(stud), decreasing = T)], 20)
 qt(.025/1492, 1485)
 ```
 
@@ -288,42 +288,5 @@ kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse 0.353181
 ```
 
-
-# liner model of a single hotel
-## Prepare subset
-Choose a hotel with most number of reviews to explore other individual characteristics of reviewers as predictors
-```{r}
-#subset the intial dataframe to a single hotel
-hotel_bri <- hotel_reviews %>% filter(Hotel_Name=="Britannia International Hotel Canary Wharf") %>% 
-  select(review_t=Total_Number_of_Reviews,
-         review_n=Review_Total_Negative_Word_Counts,
-         review_p=Review_Total_Positive_Word_Counts,
-         review_m=Additional_Number_of_Scoring,
-         reviewer_exp=Total_Number_of_Reviews_Reviewer_Has_Given,
-         score_i=Reviewer_Score) # i stands for individual
-
-```
-
-## individual score histgram
-
-The individual scores are not normal.
-```{r}
-hotel_bri %>% ggplot(aes(score_i))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
-  geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
-```
-
-## build linear model
-Each individual score (Reviewer_Score) is the response.
-```{r}
-lmod_bri <- lm(score_i~review_t+review_n+review_p+review_m+reviewer_exp, hotel_bri)
-```
-
-```{r}
-summary(lmod_bri)
-```
-
-```{r}
-
-```
 
 
