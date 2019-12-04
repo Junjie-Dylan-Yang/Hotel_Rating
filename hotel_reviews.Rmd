@@ -1,13 +1,13 @@
 ---
 title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
-date: "November 30, 2019"
+date: "December 5, 2019"
 output:
   pdf_document: default
   html_document: default
 ---
 
-```{r}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
@@ -69,6 +69,7 @@ sd(hotel_agg$score)
 ## score histgram
 
 The average scores are not prefectly normal.
+
 ```{r}
 hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
@@ -183,6 +184,7 @@ Choose review_t and review_m, to take F-test and reject the null hypothesis base
 Review_t and review_m are related to the number of reviews or scores of hotels. The hotels who have a small amout of reviwes have larger residuals. 
 
 The other residuals variances are constant. 
+
 ```{r}
 par(mfrow=c(2,3))
 plot(lmod$fitted.values,residuals(lmod))
