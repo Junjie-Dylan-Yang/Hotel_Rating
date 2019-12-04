@@ -367,8 +367,9 @@ kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse
 ```
 ```{r}
-# class example of K fold average rmse
-cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
+# class example of K fold average mse
+mse_avg_1=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
+mse_avg_1^(1/2)
 ```
 
 ## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
@@ -399,7 +400,8 @@ mean(kfold.rmse) #avg rmse
 ```
 
 ```{r}
-# class example of K fold average rmse
-cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
+# class example of K fold average mse
+mse_avg_2=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
+mse_avg_2^(1/2) # average rmse
 ```
 
