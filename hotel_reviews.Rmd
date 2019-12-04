@@ -76,12 +76,20 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
 OutVals = boxplot(hotel_agg$score)$out
 OutVals
 which(hotel_agg$score < 5.5)
-hotel_agg1=hotel_agg[ -which(hotel_agg$score < 5.5), ] # remove the #1444 hotel with the score of 5.2
+
+#keep records with score greater than 5.5
+hotel_agg1 <- hotel_agg %>% filter(score>5.5)
+#hotel_agg1=hotel_agg[ -which(hotel_agg$score < 5.5), ] # remove the #1444 hotel with the score of 5.2
 
 hotel_agg1 %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 #dim(hotel_agg1)
+
+#hotels with low scores
+hotel_agg %>% filter(score<7)
 ```
+
+## check predictors
 
 Two predictors, review_t and review_m, are not normally distributed. Both variables are related to amount of reviews.
 
@@ -104,27 +112,56 @@ summary(lmod0)
 
 ## model diagnosis
 
+### transformation of response
+
 Try to identify a transformation using Boxcox. The nearest integer is 3, so we consider a transformation of the fitted value with lambda = 3.
 
 ```{r}
 boxcox(lmod0, lambda = seq(1,5,0.1), plotit = TRUE)
-scoreCube = hotel_agg1$score*hotel_agg1$score*hotel_agg1$score  # Box-cox transformation
-review_t1 = hotel_agg1$review_t^(1/3)  # To make it normal distributed
-review_m1 = hotel_agg1$review_m^(1/3)  # To make it normal distributed
-lmod_tf = lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
-summary(lmod_tf)
 
-# consider transforming predictors
+# Box-cox transformation of response
+hotel_agg1 <- hotel_agg1 %>% mutate(scoreCube=(hotel_agg1$score)^3)
+
+# fit a linear model with transformed score as the new response
+lmod_y = lm(scoreCube ~ review_t + review_n + review_p + review_m + reviewer_exp, hotel_agg1)
+summary(lmod_y)
+```
+
+### transformation of two predictors
+
+```{r}
+# create new columns of cubic roots predictors
+hotel_agg1 <- hotel_agg1 %>% mutate(review_t1 = hotel_agg1$review_t^(1/3), review_m1 = hotel_agg1$review_m^(1/3))
+
+# all predictors at this point look normally distributed
 par(mfrow = c(2,3))
-hist(review_t1, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_t1, main = NULL, ylab = NULL)
 hist(hotel_agg1$review_n, main = NULL, ylab = NULL)
 hist(hotel_agg1$review_p, main = NULL, ylab = NULL)
-hist(review_m1, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_m1, main = NULL, ylab = NULL)
 hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
+```
+```{r}
+# Model with predictors transformed
+
+lmod_x = lm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
+summary(lmod_x)
+```
+
+### transformation of response and two predictors
+
+```{r}
+# Model with both response and predictors transformed
+
+lmod_xy = lm(scoreCube ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1)
+summary(lmod_xy)
 ```
 
 ### check error assumption
+
 #### constant variance assumption
+
+##### initial model
 
 Plot the residuals against fitted value and predictors.
 Choose review_t and review_m, to take F-test and reject the null hypothesis based on the p-value.
@@ -151,17 +188,67 @@ var.test(residuals(lmod0)[hotel_agg1$review_p>28], residuals(lmod0)[hotel_agg1$r
 var.test(residuals(lmod0)[hotel_agg1$review_m>200], residuals(lmod0)[hotel_agg1$review_m<200])
 ```
 
+##### model with transformed response
+```{r}
+par(mfrow=c(2,3))
+plot(lmod_y$fitted.values,residuals(lmod_y))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t,residuals(lmod_y))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_n,residuals(lmod_y))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_p,residuals(lmod_y))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m,residuals(lmod_y))
+abline(h=0, col = 'red')
+plot(hotel_agg1$reviewer_exp,residuals(lmod_y))
+abline(h=0, col = 'red')
+```
+
+##### model with transformed predictors
+```{r}
+par(mfrow=c(2,3))
+plot(lmod_x$fitted.values,residuals(lmod_x))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t1,residuals(lmod_x))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_n,residuals(lmod_x))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_p,residuals(lmod_x))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m1,residuals(lmod_x))
+abline(h=0, col = 'red')
+plot(hotel_agg1$reviewer_exp,residuals(lmod_x))
+abline(h=0, col = 'red')
+```
+
+##### model with transformed response and predictors
+```{r}
+par(mfrow=c(2,3))
+plot(lmod_xy$fitted.values,residuals(lmod_xy))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t1,residuals(lmod_xy))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_n,residuals(lmod_xy))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_p,residuals(lmod_xy))
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m1,residuals(lmod_xy))
+abline(h=0, col = 'red')
+plot(hotel_agg1$reviewer_exp,residuals(lmod_xy))
+abline(h=0, col = 'red')
+```
+
 #### normality assumption
 
-The QQ-plot looks heavy-tailed and the p-value of Shapiro-Wilk normality test is smaller than 0.05.
-But from the histgram plot, it looks normal.
+The QQ-plot looks heavy-tailed and the p-value of Shapiro-Wilk normality test is smaller than 0.05 (H0: residuals are normally distributed). Since there are many data points, if the model passes other tests, the normality violation may not be detrimental.
 
 ```{r}
-qqnorm(residuals(lmod0),ylab="Residuals",main="QQ plot")
-qqline(residuals(lmod0),col="blue")
-shapiro.test(residuals(lmod0))
+qqnorm(residuals(lmod_x),ylab="Residuals",main="QQ plot")
+qqline(residuals(lmod_x),col="blue")
+shapiro.test(residuals(lmod_x))
 
-hist(residuals(lmod0), breaks = 50)
+hist(residuals(lmod_x), breaks = 50)
 ```
 
 #### correlated errors
@@ -171,7 +258,9 @@ Do we still need to check the correlated errors?
 (The p-value of DW test is much smaller than 0.05, we need reject the null hypothesis. )
 
 ```{r}
-dwtest(scoreCube~review_t1+review_n+review_p+review_m1+reviewer_exp, data = hotel_agg)
+#randomize dataset as they were ordered by address
+hotel_agg1_r <- hotel_agg1[sample(nrow(hotel_agg1)),]
+dwtest(lm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1_r))
 ```
 
 ### multicolliearity - Variance Inflation Factor
@@ -179,7 +268,7 @@ dwtest(scoreCube~review_t1+review_n+review_p+review_m1+reviewer_exp, data = hote
 The max Variance Inflation Factor is smaller than 10 and the average of VIF is less than 3. We think the predictors have no multicolliearity.
 
 ```{r}
-x = model.matrix(lmod0)[, -1]
+x = model.matrix(lmod_x)[, -1]
 vif(x)
 mean(vif(x))
 ```
@@ -188,7 +277,7 @@ Outlier
 
 ```{r}
 nrow(hotel_agg1)
-stud = rstudent(lmod0)
+stud = rstudent(lmod_x)
 jackres = stud*(1485/(1486-stud^2))^0.5
 head(jackres[order(abs(stud), decreasing = T)], 20)
 qt(.025/1492, 1485)
@@ -199,11 +288,13 @@ qt(.025/1492, 1485)
 It appears that all Cook's D values are smaller than 1. We remove the obervation #1424 and creat a new model as lmod1. Because we consider it is a influential data point as its Cook's D value is much higher than the one follows.
 
 ```{r}
-cook = cooks.distance(lmod0)
+cook = cooks.distance(lmod_x)
 halfnorm(cook, 1, ylab = "Cook's distance")
+```
 
-lmod1 = lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1, subset = (cook < 0.3))
-summary(lmod1)
+```{r}
+lmod_x1 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg1, subset = (cook < 0.3))
+summary(lmod_x1)
 ```
 
 # model selection
