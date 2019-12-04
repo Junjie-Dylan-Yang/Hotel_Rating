@@ -38,7 +38,7 @@ hotel_reviews$Hotel_Address %>% unique() %>% length()
 ## hotels with most number of reviews
 ```{r}
 hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% select(name, count)
+  arrange(desc(count)) %>% dplyr::select(name, count) %>% head() #select() may get masked by another package therefore specify dplyr
 
 ```
 
@@ -55,7 +55,7 @@ hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>%
 colnames(hotel_agg)[1] <- "address"
 ```
 
-# Descriptive satatistics.
+# dataset overview
 ```{r}
 #dim(hotel_agg)
 summary(hotel_agg)
@@ -130,8 +130,9 @@ summary(lmod_y)
 ### transformation of two predictors
 
 ```{r}
-# create new columns of cubic roots predictors
-hotel_agg1 <- hotel_agg1 %>% mutate(review_t1 = hotel_agg1$review_t^(1/3), review_m1 = hotel_agg1$review_m^(1/3))
+# create new columns of transformed predictors
+#hotel_agg1 <- hotel_agg1 %>% mutate(review_t1 = hotel_agg1$review_t^(1/3), review_m1 = hotel_agg1$review_m^(1/3))
+hotel_agg1 <- hotel_agg1 %>% mutate(review_t1 = log(hotel_agg1$review_t), review_m1 = log(hotel_agg1$review_m))
 
 # all predictors at this point look normally distributed
 par(mfrow = c(2,3))
@@ -206,6 +207,7 @@ abline(h=0, col = 'red')
 ```
 
 ##### model with transformed predictors
+
 ```{r}
 par(mfrow=c(2,3))
 plot(lmod_x$fitted.values,residuals(lmod_x))
@@ -220,6 +222,14 @@ plot(hotel_agg1$review_m1,residuals(lmod_x))
 abline(h=0, col = 'red')
 plot(hotel_agg1$reviewer_exp,residuals(lmod_x))
 abline(h=0, col = 'red')
+```
+
+Performe variance test at places where lmod0 showes deficiency, both tests produce greater p values than before
+```{r}
+
+var.test(residuals(lmod_x)[hotel_agg1$review_t1>log(1000)], residuals(lmod_x)[hotel_agg1$review_t1<log(1000)])
+#var.test(residuals(lmod_x)[hotel_agg1$review_p>28], residuals(lmod_x)[hotel_agg1$review_p<28])
+var.test(residuals(lmod_x)[hotel_agg1$review_m1>log(200)], residuals(lmod_x)[hotel_agg1$review_m1<log(200)])
 ```
 
 ##### model with transformed response and predictors
@@ -253,12 +263,10 @@ hist(residuals(lmod_x), breaks = 50)
 
 #### correlated errors
 
-Do we still need to check the correlated errors? 
-
-(The p-value of DW test is much smaller than 0.05, we need reject the null hypothesis. )
+Model with transformed predictors passes DW test at $\alpha=5\%$.
 
 ```{r}
-#randomize dataset as they were ordered by address
+#randomize dataset for DW test as they were ordered by address
 hotel_agg1_r <- hotel_agg1[sample(nrow(hotel_agg1)),]
 dwtest(lm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1_r))
 ```
@@ -273,7 +281,9 @@ vif(x)
 mean(vif(x))
 ```
 
-Outlier
+### Jackknife residuals: Outlier
+
+Bonferroni-corrected criteria here cannot rule out any outlier.
 
 ```{r}
 nrow(hotel_agg1)
@@ -283,9 +293,9 @@ head(jackres[order(abs(stud), decreasing = T)], 20)
 qt(.025/1492, 1485)
 ```
 
-### Influential Observations - Cook's D
+### influential observations - Cook's D
 
-It appears that all Cook's D values are smaller than 1. We remove the obervation #1424 and creat a new model as lmod1. Because we consider it is a influential data point as its Cook's D value is much higher than the one follows.
+It appears that all Cook's D values are smaller than 1. We remove the observation with the largest Cook's D and creat a new model. We consider the observation on the upper right a influential data point: its Cook's D value is much greater than the rest of the points.
 
 ```{r}
 cook = cooks.distance(lmod_x)
@@ -297,15 +307,17 @@ lmod_x1 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg
 summary(lmod_x1)
 ```
 
-# model selection
+## model selection
 
-##forward search
+Targeted model is the one with transformed predictors (lmod_x1) having outliers removed.
+
+### forward search
 
 ```{r}
 n = nrow(hotel_agg1)
 out.null = lm(score ~ 1, hotel_agg1)
-out.full = lmod1
-full = formula(lmod1)
+out.full = lmod_x1
+full = formula(lmod_x1)
 out_f = regsubsets(full, data = hotel_agg1, method = 'forward', nvmax = 5)
 out_f0 = summary(out_f)
 out_f0$outmat
@@ -320,13 +332,13 @@ adjr2=out_f0$adjr2
 adjr2
 plot(out_f, scale="adjr2", main="Forward Selection: adjr2")
 
-which.min(model_fwd_summary$bic) 
-which.max(model_fwd_summary$adjr2)
+which.min(out_f0$bic) 
+which.max(out_f0$adjr2)
 #Best model in terms of both adjusted R-squared and bic is the full model 
 
 ```
 
-##Early stopping forward selection using BIC for model lmod1
+### early stopping forward selection using BIC
 
 ```{r}
 out.forward = step(out.null, scope = list(lower = ~1, upper = full), 
@@ -334,7 +346,7 @@ out.forward = step(out.null, scope = list(lower = ~1, upper = full),
 out.forward$coefficients
 ```
 
-## 5 Fold Cross Validation for lmod1 (full model)
+## 5 Fold Cross Validation for lmod_x1
 ```{r}
 set.seed(1)
 k=5
@@ -345,21 +357,28 @@ for(i in 1:k){
   test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
   train=hotel_agg1[fold!=i,]# training set is all the other groups
   
-  pred.time=predict(lmod1,test)
+  pred.time=predict(lmod_x1,test)
   rmse=sqrt(mean((test$score-pred.time)^2))
   
   kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
 }
 
 kfold.rmse # show our RMSEs for each iteration
-mean(kfold.rmse) #avg rmse 0.3525199
+mean(kfold.rmse) #avg rmse
+```
+```{r}
+# class example of K fold average rmse
+cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
 ```
 
-## 5 Fold Cross Validation for lmodnoexp (reduced model using early stopping)
+## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
 ```{r}
 #If we ddecide to get rid of variable exp based on forward selection
-lmodnoexp = lm(score~review_t+review_n+review_p+review_m, hotel_agg1, subset = (cook < 0.3))
-summary(lmodnoexp)
+lmod_x1_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg1, subset = (cook < 0.3))
+summary(lmod_x1_noexp)
+```
+
+```{r}
 set.seed(1)
 k=5
 fold=sample(1:k,nrow(hotel_agg1),replace=TRUE)
@@ -369,15 +388,18 @@ for(i in 1:k){
   test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
   train=hotel_agg1[fold!=i,]# training set is all the other groups
   
-  pred.time=predict(lmodnoexp,test)
+  pred.time=predict(lmod_x1_noexp,test)
   rmse=sqrt(mean((test$score-pred.time)^2))
   
   kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
 }
 
 kfold.rmse # show our RMSEs for each iteration
-mean(kfold.rmse) #avg rmse 0.353181
+mean(kfold.rmse) #avg rmse
 ```
 
-
+```{r}
+# class example of K fold average rmse
+cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
+```
 
