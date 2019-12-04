@@ -356,9 +356,9 @@ kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
   test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
   train=hotel_agg1[fold!=i,]# training set is all the other groups
-  
-  pred.time=predict(lmod_x1,test)
-  rmse=sqrt(mean((test$score-pred.time)^2))
+  model=lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp,train,subset = (cook < 0.3))
+  pred.y=predict(model,test)
+  rmse=sqrt(mean((test$score-pred.y)^2))
   
   kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
 }
@@ -367,9 +367,8 @@ kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse
 ```
 ```{r}
-# class example of K fold average mse
-mse_avg_1=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
-mse_avg_1^(1/2)
+# class example of K fold average rmse
+cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
 ```
 
 ## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
@@ -388,9 +387,9 @@ kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
   test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
   train=hotel_agg1[fold!=i,]# training set is all the other groups
-  
-  pred.time=predict(lmod_x1_noexp,test)
-  rmse=sqrt(mean((test$score-pred.time)^2))
+  model1=lm(score~review_t1+review_n+review_p+review_m1,train,subset = (cook < 0.3))
+  pred.y1=predict(model1,test)
+  rmse=sqrt(mean((test$score-pred.y1)^2))
   
   kfold.rmse[i]=rmse # store current iteration RMSE into ith position of kfold.rmse
 }
@@ -400,8 +399,7 @@ mean(kfold.rmse) #avg rmse
 ```
 
 ```{r}
-# class example of K fold average mse
-mse_avg_2=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
-mse_avg_2^(1/2) # average rmse
+# class example of K fold average rmse
+cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
 ```
 
