@@ -92,7 +92,7 @@ hotel_agg1 %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.
 #dim(hotel_agg1)
 ```
 
-One hotel with the lowest score is removed. This hotel has much fewer number of reviews in total than the others, which indicates this may be a new hotel.
+One hotel with the lowest score is removed. This hotel has much fewer total number of reviews than the others, which indicates this may be a new hotel.
 
 ```{r}
 #the removed hotel with lowest score
@@ -240,7 +240,7 @@ plot(hotel_agg1$reviewer_exp,residuals(lmod_x))
 abline(h=0, col = 'red')
 ```
 
-Performe variance test at places where initial model (lmod) showes deficiency, both tests produce greater p values than before
+Performe variance test at places where initial model (lmod) showes deficiency, both tests produce greater p values than before.
 ```{r}
 var.test(residuals(lmod_x)[hotel_agg1$review_t1>log(1000)], residuals(lmod_x)[hotel_agg1$review_t1<log(1000)])
 var.test(residuals(lmod_x)[hotel_agg1$review_m1>log(200)], residuals(lmod_x)[hotel_agg1$review_m1<log(200)])
@@ -296,13 +296,19 @@ Bonferroni-corrected criteria here rules out an outlier.
 
 ```{r}
 nrow(hotel_agg1)
-stud = rstudent(lmod_x)
-jackres = stud*(1485/(1486-stud^2))^0.5
-head(jackres[order(abs(stud), decreasing = T)], 20)
+```
+
+```{r}
 qt(.025/1492, 1485)
 ```
 
-The removed hotel here could pass the Bonferroni-corrected criteria.
+```{r}
+stud = rstudent(lmod_x)
+jackres = stud*(1485/(1486-stud^2))^0.5
+head(jackres[order(abs(stud), decreasing = T)])
+```
+
+The removed hotel here failed the Bonferroni-corrected criteria. It is a hotel with fewer total number of reviews and a high score.
 ```{r}
 hotel_agg1[1017,c(1:8)] %>% knitr::kable()
 
@@ -323,7 +329,7 @@ cook = cooks.distance(lmod_x1)
 halfnorm(cook, 1, ylab = "Cook's distance")
 ```
 
-The removed hotel here has much fewer reviews in total and a high score.
+The removed hotel here has much fewer total reviews and a high score.
 ```{r}
 hotel_agg2[1410,c(1:8)] %>% knitr::kable()
 
@@ -368,7 +374,7 @@ which.max(out_f0$adjr2)
 ```
 
 ```{r}
-plot(c(1, 2, 3, 4, 5), bic, xlab="predictors")
+plot(c(1, 2, 3, 4, 5), bic, xlab="predictors (not including intercept)")
 ```
 
 ```{r}
@@ -386,7 +392,7 @@ out.forward$coefficients
 
 ```
 
-## 5 Fold Cross Validation for lmod_x1
+## 5 Fold Cross Validation for lmod_x2
 methond 1
 ```{r}
 set.seed(1)
@@ -409,12 +415,13 @@ mean(kfold.rmse) #avg rmse
 ```
 method 2
 ```{r}
+set.seed(9)
 # class example of K fold CV
 mse_avg_1=cv.glm(data=hotel_agg3, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg3), K=5)$delta[1]
 mse_avg_1^(1/2)
 ```
 
-## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
+## 5 Fold Cross Validation for lmod_x1_noexp (manually removed the least significant predictor)
 ```{r}
 #If we ddecide to get rid of variable exp based on forward selection
 lmod_x3_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg3)
@@ -443,6 +450,7 @@ mean(kfold.rmse) #avg rmse
 ```
 method 2
 ```{r}
+set.seed(2)
 # class example of K fold CV
 mse_avg_2=cv.glm(data=hotel_agg3, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg3), K=5)$delta[1]
 mse_avg_2^(1/2) # average rmse
