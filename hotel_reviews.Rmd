@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-```{r}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
