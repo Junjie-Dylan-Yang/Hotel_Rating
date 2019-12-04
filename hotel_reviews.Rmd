@@ -1,10 +1,8 @@
 ---
 title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
-date: "November 30, 2019"
-output:
-  pdf_document: default
-  html_document: default
+date: "December 5, 2019"
+output:word_document
 ---
 
 ```{r}
