@@ -1,13 +1,13 @@
 ---
 title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
-date: "December 5, 2019"
+date: "November 30, 2019"
 output:
   pdf_document: default
   html_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
@@ -38,14 +38,6 @@ hotel_reviews$Hotel_Name %>% unique() %>% length()
 hotel_reviews$Hotel_Address %>% unique() %>% length()
 ```
 
-## hotels with most number of reviews
-```{r}
-hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% dplyr::select(name, count) %>% 
-  head() %>% #select() may get masked by another package therefore specify dplyr
-  knitr::kable()
-```
-
 ## summarise related columns to create predictors
 ```{r}
 hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>% 
@@ -69,7 +61,6 @@ sd(hotel_agg$score)
 ## score histgram
 
 The average scores are not prefectly normal.
-
 ```{r}
 hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
@@ -79,6 +70,9 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
 
 ```{r}
 OutVals = boxplot(hotel_agg$score)$out
+```
+
+```{r}
 OutVals
 which(hotel_agg$score < 5.5)
 ```
@@ -184,7 +178,6 @@ Choose review_t and review_m, to take F-test and reject the null hypothesis base
 Review_t and review_m are related to the number of reviews or scores of hotels. The hotels who have a small amout of reviwes have larger residuals. 
 
 The other residuals variances are constant. 
-
 ```{r}
 par(mfrow=c(2,3))
 plot(lmod$fitted.values,residuals(lmod))
@@ -457,4 +450,46 @@ set.seed(2)
 mse_avg_2=cv.glm(data=hotel_agg3, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg3), K=5)$delta[1]
 mse_avg_2^(1/2) # average rmse
 ```
+# summary
 
+This section highlights a few important findings from the previous analysis.
+
+## three removed outliers
+
+Using different techniques, we identified and removed three outliers. These hotel are the one with much fewer total number of reviews compared to other hotels in this dataset in general. This indicates that these may be new hotels and their scores are not stable yet.
+
+```{r}
+hotel_agg %>% filter(name=="Hotel Liberty"|name=="Hotel Gallitzinberg"|name=="Hotel Silver") %>% 
+  knitr::kable()
+
+```
+
+Compare with other hotel with a lot more total number of reviews.
+
+```{r}
+hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
+  arrange(desc(count)) %>% dplyr::select(name, count) %>% 
+  head() %>% #select() may get masked by another package therefore specify dplyr
+  knitr::kable()
+```
+
+## comparison of residual variance against two predictors for different models
+```{r}
+par(mfcol=c(2,4))
+plot(hotel_agg1$review_t,residuals(lmod), col="dark blue", xlab="review_t", ylab="residuals", main="lmod")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m,residuals(lmod), xlab="review_m", ylab="residuals", main="lmod")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t,residuals(lmod_y), col="dark blue", xlab="review_t", ylab="residuals", main="lmod_y")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m,residuals(lmod_y), xlab="review_m", ylab="residuals", main="lmod_y")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t1,residuals(lmod_x), col="dark blue", xlab="log(review_t)", ylab="residuals", main="lmod_x")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m1,residuals(lmod_x), xlab="log(review_m)", ylab="residuals", main="lmod_x")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_t1,residuals(lmod_xy), col="dark blue", xlab="log(review_t)", ylab="residuals", main="lmod_xy")
+abline(h=0, col = 'red')
+plot(hotel_agg1$review_m1,residuals(lmod_xy), xlab="log(review_m)", ylab="residuals", main="lmod_xy")
+abline(h=0, col = 'red')
+```
