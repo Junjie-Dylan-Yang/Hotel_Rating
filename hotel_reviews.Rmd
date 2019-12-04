@@ -325,17 +325,16 @@ out_f0$outmat
 
 ```{r}
 bic = out_f0$bic
-a = c(1, 2, 3, 4, 5)
-plot(a, bic)
-bic
-adjr2=out_f0$adjr2
-adjr2
-plot(out_f, scale="adjr2", main="Forward Selection: adjr2")
 
+adjr2=out_f0$adjr2
+
+bic
+adjr2
 which.min(out_f0$bic) 
 which.max(out_f0$adjr2)
 #Best model in terms of both adjusted R-squared and bic is the full model 
-
+plot(c(1, 2, 3, 4, 5), bic)
+plot(out_f, scale="adjr2", main="Forward Selection: adjr2")
 ```
 
 ### early stopping forward selection using BIC
@@ -344,6 +343,7 @@ which.max(out_f0$adjr2)
 out.forward = step(out.null, scope = list(lower = ~1, upper = full), 
                    k = log(n), direction = "forward", trace = FALSE)
 out.forward$coefficients
+
 ```
 
 ## 5 Fold Cross Validation for lmod_x1
@@ -367,7 +367,7 @@ kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse
 ```
 ```{r}
-# class example of K fold average mse
+# class example of K fold CV
 mse_avg_1=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
 mse_avg_1^(1/2)
 ```
@@ -400,7 +400,7 @@ mean(kfold.rmse) #avg rmse
 ```
 
 ```{r}
-# class example of K fold average mse
+# class example of K fold CV
 mse_avg_2=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
 mse_avg_2^(1/2) # average rmse
 ```
