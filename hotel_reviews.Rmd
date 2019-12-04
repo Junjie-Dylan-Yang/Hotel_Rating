@@ -2,7 +2,9 @@
 title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
 date: "November 30, 2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r}
@@ -11,10 +13,10 @@ library(tidyverse)
 library(lubridate)
 library(ggthemes)
 library(faraway)
-library(lmtest)
-library(MASS)
+library(lmtest) 
+library(MASS) 
 library(leaps) # for regsubsets()
-library(boot)
+library(boot) # for cv.glm()
 ```
 
 # EDA of the dataset
@@ -42,7 +44,6 @@ hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), 
   arrange(desc(count)) %>% dplyr::select(name, count) %>% 
   head() %>% #select() may get masked by another package therefore specify dplyr
   knitr::kable()
-
 ```
 
 ## summarise related columns to create predictors
@@ -241,9 +242,7 @@ abline(h=0, col = 'red')
 
 Performe variance test at places where initial model (lmod) showes deficiency, both tests produce greater p values than before
 ```{r}
-
 var.test(residuals(lmod_x)[hotel_agg1$review_t1>log(1000)], residuals(lmod_x)[hotel_agg1$review_t1<log(1000)])
-#var.test(residuals(lmod_x)[hotel_agg1$review_p>28], residuals(lmod_x)[hotel_agg1$review_p<28])
 var.test(residuals(lmod_x)[hotel_agg1$review_m1>log(200)], residuals(lmod_x)[hotel_agg1$review_m1<log(200)])
 ```
 
@@ -281,19 +280,9 @@ shapiro.test(residuals(lmod_x))
 hist(residuals(lmod_x), breaks = 50)
 ```
 
-#### correlated errors
-
-Model with transformed predictors passes DW test at $\alpha=5\%$.
-
-```{r}
-#randomize dataset for DW test as they were ordered by address
-hotel_agg1_r <- hotel_agg1[sample(nrow(hotel_agg1)),]
-dwtest(lm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, hotel_agg1_r))
-```
-
 ### multicolliearity - Variance Inflation Factor
 
-The max Variance Inflation Factor is smaller than 10 and the average of VIF is less than 3. We think the predictors have no multicolliearity.
+The max Variance Inflation Factor is smaller than 10 and the average of VIF is about 3. We think the predictors have no multicolliearity.
 
 ```{r}
 x = model.matrix(lmod_x)[, -1]
@@ -303,7 +292,7 @@ mean(vif(x))
 
 ### Jackknife residuals: Outlier
 
-Bonferroni-corrected criteria here cannot rule out any outlier.
+Bonferroni-corrected criteria here rules out an outlier.
 
 ```{r}
 nrow(hotel_agg1)
@@ -313,20 +302,11 @@ head(jackres[order(abs(stud), decreasing = T)], 20)
 qt(.025/1492, 1485)
 ```
 
-### influential observations - Cook's D
-
-It appears that all Cook's D values are smaller than 1. We remove the observation with the largest Cook's D and creat a new model. We consider the observation on the upper right a influential data point: its Cook's D value is much greater than the rest of the points.
-
+The removed hotel here could pass the Bonferroni-corrected criteria.
 ```{r}
-cook = cooks.distance(lmod_x)
-halfnorm(cook, 1, ylab = "Cook's distance")
-```
+hotel_agg1[1017,c(1:8)] %>% knitr::kable()
 
-The removed hotel here has much fewer reviews in total and a high score.
-```{r}
-hotel_agg1[1411,c(1:8)] %>% knitr::kable()
-
-hotel_agg2 <- hotel_agg1[-1411,] # subset hotel_agg1 to remove the outlier
+hotel_agg2 <- hotel_agg1[-1017,] # subset hotel_agg1 to remove the outlier
 ```
 
 ```{r}
@@ -334,18 +314,39 @@ lmod_x1 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg
 summary(lmod_x1)
 ```
 
+### influential observations - Cook's D
+
+It appears that all Cook's D values are smaller than 1. We remove the observation with the largest Cook's D and creat a new model. We consider the observation on the upper right a influential data point: its Cook's D value is much greater than the rest of the points.
+
+```{r}
+cook = cooks.distance(lmod_x1)
+halfnorm(cook, 1, ylab = "Cook's distance")
+```
+
+The removed hotel here has much fewer reviews in total and a high score.
+```{r}
+hotel_agg2[1410,c(1:8)] %>% knitr::kable()
+
+hotel_agg3 <- hotel_agg2[-1410,] # subset hotel_agg2 to remove the outlier
+```
+
+```{r}
+lmod_x2 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg3)
+summary(lmod_x2)
+```
+
 ## model selection
 
-Targeted model is the one with transformed predictors (lmod_x1) having outliers removed.
+Targeted model is the one with transformed predictors (lmod_x2) having outliers removed.
 
 ### forward search
 
 ```{r}
 
-out.null = lm(score ~ 1, hotel_agg2)
-out.full = formula(lmod_x1)
+out.null = lm(score ~ 1, hotel_agg3)
+out.full = formula(lmod_x2)
 
-out_f = regsubsets(out.full, data = hotel_agg2, method = 'forward', nvmax = 5)
+out_f = regsubsets(out.full, data = hotel_agg3, method = 'forward', nvmax = 5)
 out_f0 = summary(out_f)
 out_f0$outmat
 ```
@@ -377,7 +378,7 @@ plot(out_f, scale="adjr2", main=expression(adjusted~R^2))
 ### early stopping forward selection using BIC
 
 ```{r}
-n = nrow(hotel_agg2)
+n = nrow(hotel_agg3)
 
 out.forward = step(out.null, scope = list(lower = ~1, upper = out.full), 
                    k = log(n), direction = "forward", trace = FALSE)
@@ -390,12 +391,12 @@ methond 1
 ```{r}
 set.seed(1)
 k=5
-fold=sample(1:k,nrow(hotel_agg2),replace=TRUE)
+fold=sample(1:k,nrow(hotel_agg3),replace=TRUE)
 
 kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
-  test=hotel_agg2[fold==i,] # test set is the ith group for the ith iteration
-  train=hotel_agg2[fold!=i,]# training set is all the other groups
+  test=hotel_agg3[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg3[fold!=i,]# training set is all the other groups
   model=lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp,train)
   pred.y=predict(model,test)
   rmse=sqrt(mean((test$score-pred.y)^2))
@@ -409,27 +410,27 @@ mean(kfold.rmse) #avg rmse
 method 2
 ```{r}
 # class example of K fold CV
-mse_avg_1=cv.glm(data=hotel_agg2, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg2), K=5)$delta[1]
+mse_avg_1=cv.glm(data=hotel_agg3, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg3), K=5)$delta[1]
 mse_avg_1^(1/2)
 ```
 
 ## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
 ```{r}
 #If we ddecide to get rid of variable exp based on forward selection
-lmod_x1_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg2)
-summary(lmod_x1_noexp)
+lmod_x3_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg3)
+summary(lmod_x3_noexp)
 ```
 
 method 1
 ```{r}
 set.seed(1)
 k=5
-fold=sample(1:k,nrow(hotel_agg2),replace=TRUE)
+fold=sample(1:k,nrow(hotel_agg3),replace=TRUE)
 
 kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
-  test=hotel_agg2[fold==i,] # test set is the ith group for the ith iteration
-  train=hotel_agg2[fold!=i,]# training set is all the other groups
+  test=hotel_agg3[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg3[fold!=i,]# training set is all the other groups
   model1=lm(score~review_t1+review_n+review_p+review_m1,train)
   pred.y1=predict(model1,test)
   rmse=sqrt(mean((test$score-pred.y1)^2))
@@ -443,7 +444,7 @@ mean(kfold.rmse) #avg rmse
 method 2
 ```{r}
 # class example of K fold CV
-mse_avg_2=cv.glm(data=hotel_agg2, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg2), K=5)$delta[1]
+mse_avg_2=cv.glm(data=hotel_agg3, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg3), K=5)$delta[1]
 mse_avg_2^(1/2) # average rmse
 ```
 
