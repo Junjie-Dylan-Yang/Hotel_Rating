@@ -13,7 +13,8 @@ library(ggthemes)
 library(faraway)
 library(lmtest)
 library(MASS)
-library(leaps) ## for regsubsets()
+library(leaps) # for regsubsets()
+library(boot)
 ```
 
 # EDA of the dataset
@@ -38,7 +39,9 @@ hotel_reviews$Hotel_Address %>% unique() %>% length()
 ## hotels with most number of reviews
 ```{r}
 hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% dplyr::select(name, count) %>% head() #select() may get masked by another package therefore specify dplyr
+  arrange(desc(count)) %>% dplyr::select(name, count) %>% 
+  head() %>% #select() may get masked by another package therefore specify dplyr
+  knitr::kable()
 
 ```
 
@@ -76,7 +79,9 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
 OutVals = boxplot(hotel_agg$score)$out
 OutVals
 which(hotel_agg$score < 5.5)
+```
 
+```{r}
 #keep records with score greater than 5.5
 hotel_agg1 <- hotel_agg %>% filter(score>5.5)
 #hotel_agg1=hotel_agg[ -which(hotel_agg$score < 5.5), ] # remove the #1444 hotel with the score of 5.2
@@ -84,9 +89,13 @@ hotel_agg1 <- hotel_agg %>% filter(score>5.5)
 hotel_agg1 %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1, color="blue", fill="light blue")+
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 #dim(hotel_agg1)
+```
 
-#hotels with low scores
-hotel_agg %>% filter(score<7)
+One hotel with the lowest score is removed. This hotel has much fewer number of reviews in total than the others, which indicates this may be a new hotel.
+
+```{r}
+#the removed hotel with lowest score
+hotel_agg %>% filter(score<5.5) %>% knitr::kable(align="c")
 ```
 
 ## check predictors
@@ -106,8 +115,8 @@ hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
 ## build linear model
 Average score of each hotel is the response.
 ```{r}
-lmod0 <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1)
-summary(lmod0)
+lmod <- lm(score~review_t+review_n+review_p+review_m+reviewer_exp, hotel_agg1)
+summary(lmod)
 ```
 
 ## model diagnosis
@@ -117,9 +126,12 @@ summary(lmod0)
 Try to identify a transformation using Boxcox. The nearest integer is 3, so we consider a transformation of the fitted value with lambda = 3.
 
 ```{r}
-boxcox(lmod0, lambda = seq(1,5,0.1), plotit = TRUE)
-
 # Box-cox transformation of response
+boxcox(lmod, lambda = seq(1,5,0.1), plotit = TRUE)
+```
+
+```{r}
+# create new column with transformed response
 hotel_agg1 <- hotel_agg1 %>% mutate(scoreCube=(hotel_agg1$score)^3)
 
 # fit a linear model with transformed score as the new response
@@ -142,6 +154,7 @@ hist(hotel_agg1$review_p, main = NULL, ylab = NULL)
 hist(hotel_agg1$review_m1, main = NULL, ylab = NULL)
 hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
 ```
+
 ```{r}
 # Model with predictors transformed
 
@@ -171,22 +184,24 @@ Review_t and review_m are related to the number of reviews or scores of hotels. 
 The other residuals variances are constant. 
 ```{r}
 par(mfrow=c(2,3))
-plot(lmod0$fitted.values,residuals(lmod0))
+plot(lmod$fitted.values,residuals(lmod))
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_t,residuals(lmod0))
+plot(hotel_agg1$review_t,residuals(lmod))
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_n,residuals(lmod0))
+plot(hotel_agg1$review_n,residuals(lmod))
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_p,residuals(lmod0))
+plot(hotel_agg1$review_p,residuals(lmod))
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_m,residuals(lmod0))
+plot(hotel_agg1$review_m,residuals(lmod))
 abline(h=0, col = 'red')
-plot(hotel_agg1$reviewer_exp,residuals(lmod0))
+plot(hotel_agg1$reviewer_exp,residuals(lmod))
 abline(h=0, col = 'red')
+```
 
-var.test(residuals(lmod0)[hotel_agg1$review_t>1000], residuals(lmod0)[hotel_agg1$review_t<1000])
-var.test(residuals(lmod0)[hotel_agg1$review_p>28], residuals(lmod0)[hotel_agg1$review_p<28])
-var.test(residuals(lmod0)[hotel_agg1$review_m>200], residuals(lmod0)[hotel_agg1$review_m<200])
+```{r}
+var.test(residuals(lmod)[hotel_agg1$review_t>1000], residuals(lmod)[hotel_agg1$review_t<1000])
+var.test(residuals(lmod)[hotel_agg1$review_p>28], residuals(lmod)[hotel_agg1$review_p<28])
+var.test(residuals(lmod)[hotel_agg1$review_m>200], residuals(lmod)[hotel_agg1$review_m<200])
 ```
 
 ##### model with transformed response
@@ -224,7 +239,7 @@ plot(hotel_agg1$reviewer_exp,residuals(lmod_x))
 abline(h=0, col = 'red')
 ```
 
-Performe variance test at places where lmod0 showes deficiency, both tests produce greater p values than before
+Performe variance test at places where initial model (lmod) showes deficiency, both tests produce greater p values than before
 ```{r}
 
 var.test(residuals(lmod_x)[hotel_agg1$review_t1>log(1000)], residuals(lmod_x)[hotel_agg1$review_t1<log(1000)])
@@ -256,8 +271,13 @@ The QQ-plot looks heavy-tailed and the p-value of Shapiro-Wilk normality test is
 ```{r}
 qqnorm(residuals(lmod_x),ylab="Residuals",main="QQ plot")
 qqline(residuals(lmod_x),col="blue")
-shapiro.test(residuals(lmod_x))
+```
 
+```{r}
+shapiro.test(residuals(lmod_x))
+```
+
+```{r}
 hist(residuals(lmod_x), breaks = 50)
 ```
 
@@ -302,8 +322,15 @@ cook = cooks.distance(lmod_x)
 halfnorm(cook, 1, ylab = "Cook's distance")
 ```
 
+The removed hotel here has much fewer reviews in total and a high score.
 ```{r}
-lmod_x1 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg1, subset = (cook < 0.3))
+hotel_agg1[1411,c(1:8)] %>% knitr::kable()
+
+hotel_agg2 <- hotel_agg1[-1411,] # subset hotel_agg1 to remove the outlier
+```
+
+```{r}
+lmod_x1 = lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp, hotel_agg2)
 summary(lmod_x1)
 ```
 
@@ -314,49 +341,62 @@ Targeted model is the one with transformed predictors (lmod_x1) having outliers 
 ### forward search
 
 ```{r}
-n = nrow(hotel_agg1)
-out.null = lm(score ~ 1, hotel_agg1)
-out.full = lmod_x1
-full = formula(lmod_x1)
-out_f = regsubsets(full, data = hotel_agg1, method = 'forward', nvmax = 5)
+
+out.null = lm(score ~ 1, hotel_agg2)
+out.full = formula(lmod_x1)
+
+out_f = regsubsets(out.full, data = hotel_agg2, method = 'forward', nvmax = 5)
 out_f0 = summary(out_f)
 out_f0$outmat
 ```
 
 ```{r}
 bic = out_f0$bic
+cat("BIC:", bic)
+```
 
+```{r}
 adjr2=out_f0$adjr2
+cat("adjusted R^2:", adjr2)
+```
 
-bic
-adjr2
+```{r}
+#Best model in terms of both adjusted R-squared and bic is the full model 
 which.min(out_f0$bic) 
 which.max(out_f0$adjr2)
-#Best model in terms of both adjusted R-squared and bic is the full model 
-plot(c(1, 2, 3, 4, 5), bic)
-plot(out_f, scale="adjr2", main="Forward Selection: adjr2")
+```
+
+```{r}
+plot(c(1, 2, 3, 4, 5), bic, xlab="predictors")
+```
+
+```{r}
+plot(out_f, scale="adjr2", main=expression(adjusted~R^2))
 ```
 
 ### early stopping forward selection using BIC
 
 ```{r}
-out.forward = step(out.null, scope = list(lower = ~1, upper = full), 
+n = nrow(hotel_agg2)
+
+out.forward = step(out.null, scope = list(lower = ~1, upper = out.full), 
                    k = log(n), direction = "forward", trace = FALSE)
 out.forward$coefficients
 
 ```
 
 ## 5 Fold Cross Validation for lmod_x1
+methond 1
 ```{r}
 set.seed(1)
 k=5
-fold=sample(1:k,nrow(hotel_agg1),replace=TRUE)
+fold=sample(1:k,nrow(hotel_agg2),replace=TRUE)
 
 kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
-  test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
-  train=hotel_agg1[fold!=i,]# training set is all the other groups
-  model=lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp,train,subset = (cook < 0.3))
+  test=hotel_agg2[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg2[fold!=i,]# training set is all the other groups
+  model=lm(score~review_t1+review_n+review_p+review_m1+reviewer_exp,train)
   pred.y=predict(model,test)
   rmse=sqrt(mean((test$score-pred.y)^2))
   
@@ -366,34 +406,31 @@ for(i in 1:k){
 kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse
 ```
+method 2
 ```{r}
-<<<<<<< HEAD
-# class example of K fold average rmse
-cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
-=======
 # class example of K fold CV
-mse_avg_1=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg1), K=5)$delta[1]
+mse_avg_1=cv.glm(data=hotel_agg2, glm(score ~ review_t1 + review_n + review_p + review_m1 + reviewer_exp, data=hotel_agg2), K=5)$delta[1]
 mse_avg_1^(1/2)
->>>>>>> d6e93dbb3cd499447cc1fedea0879c9c6cdb553f
 ```
 
 ## 5 Fold Cross Validation for lmod_x1_noexp (reduced model using early stopping)
 ```{r}
 #If we ddecide to get rid of variable exp based on forward selection
-lmod_x1_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg1, subset = (cook < 0.3))
+lmod_x1_noexp = lm(score~review_t1+review_n+review_p+review_m1, hotel_agg2)
 summary(lmod_x1_noexp)
 ```
 
+method 1
 ```{r}
 set.seed(1)
 k=5
-fold=sample(1:k,nrow(hotel_agg1),replace=TRUE)
+fold=sample(1:k,nrow(hotel_agg2),replace=TRUE)
 
 kfold.rmse=1:k # we will have 5 RMSEs to fill this with later
 for(i in 1:k){
-  test=hotel_agg1[fold==i,] # test set is the ith group for the ith iteration
-  train=hotel_agg1[fold!=i,]# training set is all the other groups
-  model1=lm(score~review_t1+review_n+review_p+review_m1,train,subset = (cook < 0.3))
+  test=hotel_agg2[fold==i,] # test set is the ith group for the ith iteration
+  train=hotel_agg2[fold!=i,]# training set is all the other groups
+  model1=lm(score~review_t1+review_n+review_p+review_m1,train)
   pred.y1=predict(model1,test)
   rmse=sqrt(mean((test$score-pred.y1)^2))
   
@@ -403,15 +440,10 @@ for(i in 1:k){
 kfold.rmse # show our RMSEs for each iteration
 mean(kfold.rmse) #avg rmse
 ```
-
+method 2
 ```{r}
-<<<<<<< HEAD
-# class example of K fold average rmse
-cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
-=======
 # class example of K fold CV
-mse_avg_2=cv.glm(data=hotel_agg1, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg1), K=5)$delta[1]
+mse_avg_2=cv.glm(data=hotel_agg2, glm(score ~ review_t1 + review_n + review_p + review_m1, data=hotel_agg2), K=5)$delta[1]
 mse_avg_2^(1/2) # average rmse
->>>>>>> d6e93dbb3cd499447cc1fedea0879c9c6cdb553f
 ```
 
