@@ -476,6 +476,17 @@ hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), 
   knitr::kable()
 ```
 
+
+## comparison of histogram of two presictors before and after logarithm transformation
+
+```{r}
+par(mfrow = c(2,2))
+hist(hotel_agg1$review_t, main = NULL, ylab = NULL)
+hist(review_t1, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_m, main = NULL, ylab = NULL)
+hist(review_m1, main = NULL, ylab = NULL)
+```
+
 ## comparison of residual variance against two predictors for different models
 ```{r}
 par(mfcol=c(2,4))
