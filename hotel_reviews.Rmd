@@ -3,6 +3,7 @@ title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
 date: "December 5, 2019"
 output:
+  word_document: default
   pdf_document: default
   html_document:
     keep_md: yes
@@ -18,6 +19,7 @@ library(lmtest)
 library(MASS) 
 library(leaps) # for regsubsets()
 library(boot) # for cv.glm()
+library(knitr)
 ```
 
 # EDA of the dataset
@@ -93,7 +95,7 @@ One hotel with the lowest score is removed. This hotel has much fewer total numb
 
 ```{r}
 #the removed hotel with lowest score
-hotel_agg %>% filter(score<5.5) %>% knitr::kable(align="c")
+hotel_agg %>% filter(score<5.5) %>% .[ , 2:8] %>% kable()
 ```
 
 ## check predictors
@@ -308,7 +310,7 @@ head(jackres[order(abs(stud), decreasing = T)])
 
 The removed hotel here failed the Bonferroni-corrected criteria. It is a hotel with fewer total number of reviews and a high score.
 ```{r}
-hotel_agg1[1017,c(1:8)] %>% knitr::kable()
+hotel_agg1[1017,c(1:8)] %>% .[ , 2:8] %>% kable()
 
 hotel_agg2 <- hotel_agg1[-1017,] # subset hotel_agg1 to remove the outlier
 ```
@@ -329,7 +331,7 @@ halfnorm(cook, 1, ylab = "Cook's distance")
 
 The removed hotel here has much fewer total reviews and a high score.
 ```{r}
-hotel_agg2[1410,c(1:8)] %>% knitr::kable()
+hotel_agg2[1410,c(1:8)] %>% .[ , 2:8] %>% kable()
 
 hotel_agg3 <- hotel_agg2[-1410,] # subset hotel_agg2 to remove the outlier
 ```
@@ -463,17 +465,14 @@ Using different techniques, we identified and removed three outliers. These hote
 
 ```{r}
 hotel_agg %>% filter(name=="Hotel Liberty"|name=="Hotel Gallitzinberg"|name=="Hotel Silver") %>% 
-  knitr::kable()
-
+  .[ , 2:8] %>% kable()
 ```
 
-Compare with other hotel with a lot more total number of reviews.
+Compare with other hotels with a lot more total number of reviews.
 
 ```{r}
 hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% dplyr::select(name, count) %>% 
-  head() %>% #select() may get masked by another package therefore specify dplyr
-  knitr::kable()
+  arrange(desc(count)) %>% dplyr::select(name, count) %>% head() %>% kable()
 ```
 
 
@@ -481,10 +480,10 @@ hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), 
 
 ```{r}
 par(mfrow = c(2,2))
-hist(hotel_agg1$review_t, main = NULL, ylab = NULL)
-hist(review_t1, main = NULL, ylab = NULL)
-hist(hotel_agg1$review_m, main = NULL, ylab = NULL)
-hist(review_m1, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_t, xlab="review_t", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_t1, xlab ="log(review_t)", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_m, xlab="review_m", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_m1, xlab ="log(review_m)", ylab=NULL, main=NULL)
 ```
 
 ## comparison of residual variance against two predictors for different models
