@@ -379,6 +379,7 @@ plot(c(1, 2, 3, 4, 5), bic, xlab="predictors (not including intercept)")
 
 ```{r}
 plot(out_f, scale="adjr2", main=expression(adjusted~R^2))
+plot(out_f, scale="bic", main=expression(bic))
 ```
 
 ### early stopping forward selection using BIC
