@@ -1,6 +1,6 @@
 ---
 title: "Hotel Reviews"
-author: "Zhichao Hu, Hui Wang, and Junjie Yang"
+author: "Hui Wang, Junjie Yang, and Zhichao Hu"
 date: "December 5, 2019"
 output:
   word_document: default
