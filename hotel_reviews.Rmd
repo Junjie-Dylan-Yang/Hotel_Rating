@@ -20,6 +20,7 @@ library(MASS)
 library(leaps) # for regsubsets()
 library(boot) # for cv.glm()
 library(knitr)
+library(broom)
 ```
 
 # EDA of the dataset
@@ -534,6 +535,13 @@ plot(hotel_agg1$review_m1,residuals(lmod_xy), xlab="log(review_m)", ylab="residu
 abline(h=0, col = 'red')
 ```
 
+## final model summary
 ```{r}
-ggsave("score_hist_2.jpeg", width = 5, height = 4, dpi = 300, units = "in")
+tidy(lmod_x2) %>% kable(digit=20)
+```
+```{r}
+augment(lmod_x2)
+```
+```{r}
+glance(lmod_x2)
 ```
