@@ -70,6 +70,11 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
   geom_density(color="red", size=1, fill="red", alpha=0.2)+theme_bw()
 ```
 
+```{r}
+#save image
+ggsave("score_hist_1.jpeg", width = 5, height = 4, dpi = 300, units = "in")
+```
+
 ## remove an outlier with the score of 5.2
 
 ```{r}
@@ -79,6 +84,14 @@ OutVals = boxplot(hotel_agg$score)$out
 ```{r}
 OutVals
 which(hotel_agg$score < 5.5)
+```
+
+```{r}
+#save image
+#jpeg("boxplot.jpeg", width = 800, height = 1200, pointsize = 30, quality = 100)
+par(cex=2)
+boxplot(hotel_agg$score)
+#dev.off()
 ```
 
 ```{r}
@@ -104,11 +117,11 @@ Two predictors, review_t and review_m, are not normally distributed. Both variab
 
 ```{r}
 par(mfrow = c(2,3))
-hist(hotel_agg1$review_t, main = NULL, ylab = NULL)
-hist(hotel_agg1$review_n, main = NULL, ylab = NULL)
-hist(hotel_agg1$review_p, main = NULL, ylab = NULL)
-hist(hotel_agg1$review_m, main = NULL, ylab = NULL)
-hist(hotel_agg1$reviewer_exp, main = NULL, ylab = NULL)
+hist(hotel_agg1$review_t, xlab="review_t", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_n, xlab="review_n", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_p, xlab="review_p", ylab=NULL, main=NULL)
+hist(hotel_agg1$review_m, xlab="review_m", ylab=NULL, main=NULL)
+hist(hotel_agg1$reviewer_exp, xlab="review_exp", ylab=NULL, main=NULL)
 ```
 
 # linear model of averaged predictors
@@ -185,17 +198,17 @@ The other residuals variances are constant.
 
 ```{r}
 par(mfrow=c(2,3))
-plot(lmod$fitted.values,residuals(lmod))
+plot(lmod$fitted.values,residuals(lmod), xlab="fitted values", ylab="residuals")
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_t,residuals(lmod))
+plot(hotel_agg1$review_t,residuals(lmod), xlab="review_t", ylab="residuals")
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_n,residuals(lmod))
+plot(hotel_agg1$review_n,residuals(lmod), xlab="review_n", ylab="residuals")
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_p,residuals(lmod))
+plot(hotel_agg1$review_p,residuals(lmod), xlab="review_p", ylab="residuals")
 abline(h=0, col = 'red')
-plot(hotel_agg1$review_m,residuals(lmod))
+plot(hotel_agg1$review_m,residuals(lmod), xlab="review_m", ylab="residuals")
 abline(h=0, col = 'red')
-plot(hotel_agg1$reviewer_exp,residuals(lmod))
+plot(hotel_agg1$reviewer_exp,residuals(lmod), xlab="reviewer_exp", ylab="residuals")
 abline(h=0, col = 'red')
 ```
 
@@ -379,7 +392,10 @@ plot(c(1, 2, 3, 4, 5), bic, xlab="predictors (not including intercept)")
 
 ```{r}
 plot(out_f, scale="adjr2", main=expression(adjusted~R^2))
-plot(out_f, scale="bic", main=expression(bic))
+```
+
+```{r}
+plot(out_f, scale="bic", main="BIC")
 ```
 
 ### early stopping forward selection using BIC
@@ -506,4 +522,8 @@ plot(hotel_agg1$review_t1,residuals(lmod_xy), col="dark blue", xlab="log(review_
 abline(h=0, col = 'red')
 plot(hotel_agg1$review_m1,residuals(lmod_xy), xlab="log(review_m)", ylab="residuals", main="lmod_xy")
 abline(h=0, col = 'red')
+```
+
+```{r}
+ggsave("score_hist_2.jpeg", width = 5, height = 4, dpi = 300, units = "in")
 ```
