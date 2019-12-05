@@ -54,6 +54,12 @@ hotel_agg <- hotel_reviews %>% group_by(Hotel_Address) %>%
 colnames(hotel_agg)[1] <- "address"
 ```
 
+```{r}
+# number of observations per hotel
+hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
+  arrange(desc(count)) %>% dplyr::select(name, count) %>% head() %>% kable()
+```
+
 # dataset overview
 ```{r}
 #dim(hotel_agg)
@@ -72,7 +78,7 @@ hotel_agg %>% ggplot(aes(score))+geom_histogram(aes(y=..density..), binwidth=0.1
 
 ```{r}
 #save image
-ggsave("score_hist_1.jpeg", width = 5, height = 4, dpi = 300, units = "in")
+#("score_hist_1.jpeg", width = 5, height = 4, dpi = 300, units = "in")
 ```
 
 ## remove an outlier with the score of 5.2
@@ -89,8 +95,8 @@ which(hotel_agg$score < 5.5)
 ```{r}
 #save image
 #jpeg("boxplot.jpeg", width = 800, height = 1200, pointsize = 30, quality = 100)
-par(cex=2)
-boxplot(hotel_agg$score)
+#par(cex=2)
+#boxplot(hotel_agg$score)
 #dev.off()
 ```
 
@@ -122,6 +128,9 @@ hist(hotel_agg1$review_n, xlab="review_n", ylab=NULL, main=NULL)
 hist(hotel_agg1$review_p, xlab="review_p", ylab=NULL, main=NULL)
 hist(hotel_agg1$review_m, xlab="review_m", ylab=NULL, main=NULL)
 hist(hotel_agg1$reviewer_exp, xlab="review_exp", ylab=NULL, main=NULL)
+
+#dev.copy(jpeg, "fig2_pred_hist.jpeg")
+#dev.off()
 ```
 
 # linear model of averaged predictors
@@ -305,7 +314,7 @@ mean(vif(x))
 
 ### Jackknife residuals: Outlier
 
-Bonferroni-corrected criteria here rules out an outlier.
+Bonferroni-corrected criterion here rules out an outlier.
 
 ```{r}
 nrow(hotel_agg1)
@@ -488,9 +497,10 @@ hotel_agg %>% filter(name=="Hotel Liberty"|name=="Hotel Gallitzinberg"|name=="Ho
 Compare with other hotels with a lot more total number of reviews.
 
 ```{r}
-hotel_reviews %>% group_by(Hotel_Address) %>% summarise(name=first(Hotel_Name), count=n()) %>% 
-  arrange(desc(count)) %>% dplyr::select(name, count) %>% head() %>% kable()
+hotel_agg %>% .[, 2:8] %>% arrange(desc(review_t)) %>% head() %>% kable()
 ```
+
+
 
 
 ## comparison of histogram of two presictors before and after logarithm transformation
