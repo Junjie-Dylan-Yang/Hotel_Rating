@@ -2,10 +2,13 @@
 title: "Hotel Reviews"
 author: "Zhichao Hu, Hui Wang, and Junjie Yang"
 date: "December 5, 2019"
-output:word_document
+output:
+  pdf_document: default
+  html_document:
+    keep_md: yes
 ---
 
-```{r}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
