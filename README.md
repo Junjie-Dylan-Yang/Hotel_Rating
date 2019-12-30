@@ -1,5 +1,3 @@
-<center>A linear regression approach to hotel rating</center>
-
 A dataset containing 515,000 customer reviews of 1493 hotels across Europe was scraped from Booking.com and made available by Jiashen Liu. Leveraging this dataset, we took the linear regression approach to model and interpret the relationship between user sentiment and rating score.
 
 As expected, the final model illustrates that the average number of words in the positive reviews have a positive relationship with the response variable while the average number of words in the negative review negatively affect the response variable. One interesting finding is that the number of valid scores without review seems to have a positive influence on hotel rating: hotel guests with bad experiences tend to give low rating and leave wordy complaint to express dissatisfaction; on the other hand, a fair amount of people with moderate to strong satisfaction during their stay would likely to give decent scores without leaving a praise in the comment.
